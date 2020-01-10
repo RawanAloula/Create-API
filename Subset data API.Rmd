@@ -1,0 +1,85 @@
+---
+title: "fortunecookie"
+author: " "
+date: " "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+<br>
+
+
+#### Plumber API with an endpointnamed "subsetdata"
+
+The subsetdata API takes user's values of a particular variables of the dataset (using post method to receive data) and return data filtered to a subset of rows in the dataset
+The iris dataset is used as an example. 
+
+
+
+##### Setup
+
+```{r, message=F}
+library(datasets)
+library(dplyr)
+```
+
+
+<br>
+
+##### Step 1: Write down the functions and save it to a file called "plumber2.R" in the same directory
+
+```{r,eval=F, echo=T}
+# plumber2.R
+
+#* Subset the data according to certain parameter
+#* @param variable The variable used  
+#* @param accept.value The value of the column used to filter the data.
+#* @post /subsetdata
+function(variable, accept.value){
+  
+    if(is.numeric(iris[variable]))    
+           iris %>% 
+             subset(., iris[variable] > as.numeric(accept.value))
+  else 
+           iris %>% 
+             subset(., iris[variable] == accept.value)
+}
+
+```
+
+
+<br>
+ 
+##### Step 2: Run this part (the link http://127.0.0.1:8001/__swagger__/ should open)
+
+
+```{r,eval=F, echo=T}
+
+p2 <- plumb("plumber2.R")  # Where 'plumber.R' is the location of the file shown above
+p2$run(port=8001)
+
+```
+
+
+<br>
+
+##### Step 3: In a diffrent session (Session -> New Session) test the function
+
+
+```{r,eval=F, echo=T}
+
+# USE POST QUERY ARGUMENTS
+
+test2 <- POST("http://localhost:8001/subsetdata", query = list(variable = 'Species', accept.value = 'setosa'))
+
+content(test2)
+```
+
+<br>
+
+
+

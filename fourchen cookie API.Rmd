@@ -1,0 +1,184 @@
+---
+title: "fortunecookie"
+author: " "
+date: " "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+<br>
+
+
+#### Plumber API with an endpoint named "fortunecookie"
+
+The fortunecookie API takes user's first name and last name and return "Hi first name + last name.  Your fortune is...".  
+The fortune  is webscraped from http://www.fortunecookiemessage.com/
+
+
+<br>
+
+##### Step 1: Write down the functions and save it to a file called "plumber.R" in the same directory
+```{r,message=F}
+
+# using Devloper tools we find this line <div class="quote"><a href="cookie/9559-Our-deeds-determine-us,-as-much-as-we-determine-our-deeds." class="cookie-link">Our deeds determine us, as much as we determine our deeds.</a></div>
+
+library (rvest)   # for webscraping
+```
+
+
+```{r,eval=F, echo=T}
+# plumber.R
+
+#* The name with the fortune cookie
+#* @param first_name The first name of user
+#* @param last_name The last name of user
+#* @get /fortunecookie
+function(first_name, last_name){
+  
+  Cookie <- read_html("http://www.fortunecookiemessage.com/") %>%
+    html_nodes("a") %>% 
+    html_attr("href") %>%
+    grep("cookie/", ., value=TRUE) %>%
+    
+    # Cleaning 
+    str_replace_all (pattern = "<p>", replacement = " ") %>%
+    str_replace_all (pattern = "cookie", replacement = " ") %>%
+    str_replace_all (pattern = "[:punct:]", replacement = " ") %>%
+    str_replace_all (pattern = "\\d", replacement = " ") %>%
+    str_replace_all (pattern = "< p>$" , replacement = " ") %>%
+    str_trim (side = "both")  
+  
+  list(paste("Hi", first_name, last_name,".Your fortune is",Cookie))
+}
+```
+
+
+<br>
+
+##### Step 2: Run this part (the link http://127.0.0.1:8000/__swagger__/ should open)
+
+```{r,eval=F, echo=T}
+library(plumber)
+p <- plumb("plumber.R")  # Where 'plumber.R' is the location of the file shown above
+p$run(port=8000)
+
+```
+
+
+<br>
+
+
+##### Step 3: In a diffrent session (Session -> New Session) test the function
+
+```{r,eval=F, echo=T}
+library(httr)
+
+# USE GET QUERY ARGUMENTS
+
+test <- GET("http://localhost:8000/fortunecookie", query = list(first_name = "Rawan", last_name = "Aloula"))
+
+content(test)
+```
+
+<br>
+
+#### 2.) Create a plumber api with an endpoint named "subsetdata".  The api should use the post method to receive data.  Users should be able to post values of particular variables of the dataset to the api.  The api should then take the values the user posts and return data filtered to a subset of rows in the dataset that the end-user requests.  USE the iris dataset to build your api.
+
+
+
+##### Setup
+
+```{r, message=F}
+library(datasets)
+library(dplyr)
+```
+
+
+<br>
+
+##### Step 1: Write down the functions and save it to a file called "plumber2.R" in the same directory
+
+```{r,eval=F, echo=T}
+# plumber2.R
+
+#* Subset the data according to certain parameter
+#* @param variable The variable used  
+#* @param accept.value The value of the column used to filter the data.
+#* @post /subsetdata
+function(variable, accept.value){
+  
+    if(is.numeric(iris[variable]))    
+           iris %>% 
+             subset(., iris[variable] > as.numeric(accept.value))
+  else 
+           iris %>% 
+             subset(., iris[variable] == accept.value)
+}
+
+```
+
+
+<br>
+ 
+##### Step 2: Run this part (the link http://127.0.0.1:8001/__swagger__/ should open)
+
+
+```{r,eval=F, echo=T}
+
+p2 <- plumb("plumber2.R")  # Where 'plumber.R' is the location of the file shown above
+p2$run(port=8001)
+
+```
+
+
+<br>
+
+##### Step 3: In a diffrent session (Session -> New Session) test the function
+
+
+```{r,eval=F, echo=T}
+
+# USE POST QUERY ARGUMENTS
+
+test2 <- POST("http://localhost:8001/subsetdata", query = list(variable = 'Species', accept.value = 'setosa'))
+
+content(test2)
+```
+
+<br>
+
+#### 3.) Describe an API you might build to assist you or your organization. This is an open question to get you to think about how you could use APIs built over R code to automate processes.
+
+<br>
+
+People Are visual, and news can be complex sometimes. I would like to build an API that visualizes news. In one single image, you get the trending topics of that day.
+
+How?
+
+Choose a number of news channels (CNN, New York Times, NBC...)
+
+Web scrape the top ten headlines on each page. Give different weights based on the rank of the title on that page  (will be used later)
+
+Find common topics between these news sources using text analysis (word synonym frequency for example)
+
+Return suggested title that represents each topic (max 3 words)
+
+Next, rank the topic importance based on the sum of the weight of original sources. where,
+
+Topic 1 = rank on source 1 + rank on source 2 + ...
+
+Then arrange from the lowest score (more important) to highest score (less important)
+
+Finally, use an interactive network visualization (example shown below) with text size as an indicator of importance. The end user (if interested) can click on the topic an explore inner connections between news sources with a direct link to each source. 
+
+
+![Concept illustration. [Source](https://sites.psu.edu/datavisaward/definitions-and-examples/examples/text-analysis-graphics/)](/Users/Rawan/Downloads/text-network.png)
+
+
+
+
+
